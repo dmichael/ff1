@@ -1,0 +1,18 @@
+[submodule "vendor/feralfile-device"]
+	path = vendor/feralfile-device
+	url = https://github.com/Feral-File/feralfile-device.git
+[submodule "vendor/feral-file-docs"]
+	path = vendor/feral-file-docs
+	url = https://github.com/bitmark-inc/feral-file-docs.git
+[submodule "vendor/ffos"]
+	path = vendor/ffos
+	url = https://github.com/feral-file/ffos.git
+[submodule "vendor/ffos-user"]
+	path = vendor/ffos-user
+	url = https://github.com/feral-file/ffos-user.git
+[submodule "vendor/dp1-validator"]
+	path = vendor/dp1-validator
+	url = https://github.com/display-protocol/dp1-validator.git
+[submodule "vendor/ff1-cli"]
+	path = vendor/ff1-cli
+	url = https://github.com/feral-file/ff1-cli.git
