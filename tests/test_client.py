@@ -24,7 +24,7 @@ async def test_send_command_envelope(client):
     """Verify the correct envelope is sent to the API."""
     mock_response = _ok()
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
         result = await client.send_command("rotate", {"clockwise": True})
 
     assert result == {"ok": True}
@@ -43,12 +43,25 @@ async def test_send_command_no_auth():
     client = FF1Client(host="10.0.0.1")
     mock_response = _ok()
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
         await client.send_command("shutdown")
 
     call_kwargs = mock_post.call_args
     assert "API-KEY" not in call_kwargs.kwargs["headers"]
     assert call_kwargs.kwargs["params"] == {}
+
+
+@pytest.mark.asyncio
+async def test_send_command_no_request_sends_none():
+    """Commands with no args should send request: null, not request: {}."""
+    client = FF1Client(host="10.0.0.1")
+    mock_response = _ok()
+
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
+        await client.send_command("shutdown")
+
+    call_kwargs = mock_post.call_args
+    assert call_kwargs.kwargs["json"]["request"] is None
 
 
 @pytest.mark.asyncio
@@ -66,7 +79,7 @@ async def test_get_device_status(client):
     }
     mock_response = _ok(status_data)
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response):
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response):
         status = await client.get_device_status()
 
     assert status.screen_rotation == "portrait"
@@ -78,7 +91,7 @@ async def test_get_device_status(client):
 async def test_rotate(client):
     mock_response = _ok({"orientation": "landscape"})
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
         result = await client.rotate(clockwise=False)
 
     assert result["orientation"] == "landscape"
@@ -90,7 +103,7 @@ async def test_rotate(client):
 async def test_set_volume(client):
     mock_response = _ok()
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
         await client.set_volume(42)
 
     call_kwargs = mock_post.call_args
@@ -101,7 +114,7 @@ async def test_set_volume(client):
 async def test_display_playlist_by_url(client):
     mock_response = _ok()
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
         await client.display_playlist(playlist_url="https://example.com/pl.json")
 
     call_kwargs = mock_post.call_args
@@ -113,7 +126,7 @@ async def test_display_playlist_by_object(client):
     mock_response = _ok()
     playlist = {"dpVersion": "1.0.0", "items": []}
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post:
         await client.display_playlist(playlist=playlist)
 
     call_kwargs = mock_post.call_args
@@ -126,3 +139,18 @@ async def test_display_playlist_by_object(client):
 async def test_display_playlist_requires_arg(client):
     with pytest.raises(ValueError, match="Provide either"):
         await client.display_playlist()
+
+
+@pytest.mark.asyncio
+async def test_client_timeout_configurable():
+    """Client timeout propagates to httpx."""
+    client = FF1Client(host="10.0.0.1", timeout=5.0)
+    assert client.timeout == 5.0
+    assert client._http.timeout.connect == 5.0
+
+
+@pytest.mark.asyncio
+async def test_client_context_manager():
+    """Client can be used as an async context manager."""
+    async with FF1Client(host="10.0.0.1") as client:
+        assert client._http is not None

@@ -43,58 +43,58 @@ async def ff1_discover() -> list[dict]:
 @mcp.tool()
 async def ff1_status(device: str | None = None) -> dict:
     """Get FF1 device status (orientation, wifi, version, volume, etc.)."""
-    client = await _get_client(device)
-    result = await client.get_device_status()
-    return result.model_dump(by_alias=True)
+    async with await _get_client(device) as client:
+        result = await client.get_device_status()
+        return result.model_dump(by_alias=True)
 
 
 @mcp.tool()
 async def ff1_rotate(clockwise: bool = True, device: str | None = None) -> dict:
     """Rotate the FF1 screen. Set clockwise=False for counter-clockwise."""
-    client = await _get_client(device)
-    return await client.rotate(clockwise=clockwise)
+    async with await _get_client(device) as client:
+        return await client.rotate(clockwise=clockwise)
 
 
 @mcp.tool()
 async def ff1_set_volume(percent: int, device: str | None = None) -> dict:
     """Set FF1 volume (0-100)."""
-    client = await _get_client(device)
-    return await client.set_volume(percent)
+    async with await _get_client(device) as client:
+        return await client.set_volume(percent)
 
 
 @mcp.tool()
 async def ff1_toggle_mute(device: str | None = None) -> dict:
     """Toggle mute on the FF1."""
-    client = await _get_client(device)
-    return await client.toggle_mute()
+    async with await _get_client(device) as client:
+        return await client.toggle_mute()
 
 
 @mcp.tool()
 async def ff1_send_key(code: int, device: str | None = None) -> dict:
     """Send a keyboard event to the FF1. Code is the key code (e.g., 13=Enter)."""
-    client = await _get_client(device)
-    return await client.send_key(code)
+    async with await _get_client(device) as client:
+        return await client.send_key(code)
 
 
 @mcp.tool()
 async def ff1_shutdown(device: str | None = None) -> dict:
     """Shutdown the FF1 device."""
-    client = await _get_client(device)
-    return await client.shutdown()
+    async with await _get_client(device) as client:
+        return await client.shutdown()
 
 
 @mcp.tool()
 async def ff1_reboot(device: str | None = None) -> dict:
     """Reboot the FF1 device."""
-    client = await _get_client(device)
-    return await client.reboot()
+    async with await _get_client(device) as client:
+        return await client.reboot()
 
 
 @mcp.tool()
 async def ff1_update(device: str | None = None) -> dict:
     """Trigger OTA firmware update on the FF1."""
-    client = await _get_client(device)
-    return await client.update_firmware()
+    async with await _get_client(device) as client:
+        return await client.update_firmware()
 
 
 # --- Playback ---
@@ -102,24 +102,24 @@ async def ff1_update(device: str | None = None) -> dict:
 @mcp.tool()
 async def ff1_play_url(url: str, duration: int = 300, device: str | None = None) -> dict:
     """Display a single artwork URL on the FF1."""
-    client = await _get_client(device)
-    pl = build_playlist([url], title="Quick Play", duration=duration)
-    return await client.display_playlist(playlist=pl.model_dump(by_alias=True, exclude_none=True))
+    async with await _get_client(device) as client:
+        pl = build_playlist([url], title="Quick Play", duration=duration)
+        return await client.display_playlist(playlist=pl.model_dump(by_alias=True, exclude_none=True))
 
 
 @mcp.tool()
 async def ff1_play_playlist(playlist_url: str, device: str | None = None) -> dict:
     """Play a DP1 playlist from a URL on the FF1."""
-    client = await _get_client(device)
-    return await client.display_playlist(playlist_url=playlist_url)
+    async with await _get_client(device) as client:
+        return await client.display_playlist(playlist_url=playlist_url)
 
 
 @mcp.tool()
 async def ff1_player_status(device: str | None = None) -> dict:
     """Get current playback status from the FF1 (via WebSocket)."""
-    client = await _get_client(device)
-    result = await client.get_player_status()
-    return result.model_dump(by_alias=True)
+    async with await _get_client(device) as client:
+        result = await client.get_player_status()
+        return result.model_dump(by_alias=True)
 
 
 # --- Playlist building ---

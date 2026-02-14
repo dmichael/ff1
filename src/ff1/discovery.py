@@ -24,11 +24,6 @@ import httpx
 
 from ff1.types import DeviceInfo
 
-_CONFIG_PATHS = [
-    Path.cwd() / "ff1.json",
-    Path.home() / ".config" / "ff1" / "config.json",
-]
-
 FF1_DEFAULT_PORT = 1111
 FF1_HOSTNAME_PREFIX = "ff1-"
 
@@ -42,7 +37,11 @@ def _find_config() -> Path | None:
         p = Path(env_path)
         if p.exists():
             return p
-    for p in _CONFIG_PATHS:
+    search_paths = [
+        Path.cwd() / "ff1.json",
+        Path.home() / ".config" / "ff1" / "config.json",
+    ]
+    for p in search_paths:
         if p.exists():
             return p
     return None
@@ -140,7 +139,7 @@ async def probe_host(host: str, port: int = FF1_DEFAULT_PORT, timeout: float = 2
     return None
 
 
-async def scan_network() -> list[DeviceInfo]:
+async def scan_network(probe_timeout: float = 3.0) -> list[DeviceInfo]:
     """Find FF1 devices on the network via ARP table, then verify with probe.
 
     The ARP table contains hostnames from DHCP/mDNS. FF1 devices always
@@ -152,7 +151,7 @@ async def scan_network() -> list[DeviceInfo]:
         return []
 
     # Verify all candidates concurrently
-    tasks = [probe_host(d.host, d.port) for d in candidates]
+    tasks = [probe_host(d.host, d.port, timeout=probe_timeout) for d in candidates]
     results = await asyncio.gather(*tasks)
 
     verified = []
@@ -170,4 +169,4 @@ async def discover_devices(timeout: float = 3.0) -> list[DeviceInfo]:
     devices = load_devices()
     if devices:
         return devices
-    return await scan_network()
+    return await scan_network(probe_timeout=timeout)

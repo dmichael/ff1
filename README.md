@@ -1,6 +1,6 @@
 <img src="https://feralfile.com/assets/feralfile-og.png" width="200" alt="Feral File" />
 
-# ff1ctl
+# `ff1ctl`
 
 **CLI and agent toolkit for the [Feral File](https://feralfile.com) FF1 art computer.**
 Zero-config discovery. Full device control. Agent-ready.

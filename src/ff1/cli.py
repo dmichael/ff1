@@ -73,10 +73,10 @@ def main(ctx, pretty):
 
 
 @main.command()
-@click.option("--timeout", default=3.0, help="mDNS scan timeout in seconds")
+@click.option("--timeout", default=3.0, help="Discovery timeout in seconds")
 @click.pass_context
 def discover(ctx, timeout):
-    """Find FF1 devices on the network (config + mDNS scan)."""
+    """Find FF1 devices on the network (config + ARP scan)."""
     async def _go():
         devices = await discover_devices(timeout=timeout)
         _output([d.model_dump() for d in devices], ctx.obj["pretty"])
@@ -89,9 +89,9 @@ def discover(ctx, timeout):
 def status(ctx, device):
     """Get device status."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.get_device_status()
-        _output(result.model_dump(by_alias=True), ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.get_device_status()
+            _output(result.model_dump(by_alias=True), ctx.obj["pretty"])
     _run(_go())
 
 
@@ -103,10 +103,10 @@ def status(ctx, device):
 def play(ctx, url, device, duration):
     """Display a single artwork URL on the FF1."""
     async def _go():
-        client = await _resolve_device(device)
-        pl = build_playlist([url], title="Quick Play", duration=duration)
-        result = await client.display_playlist(playlist=pl.model_dump(by_alias=True, exclude_none=True))
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            pl = build_playlist([url], title="Quick Play", duration=duration)
+            result = await client.display_playlist(playlist=pl.model_dump(by_alias=True, exclude_none=True))
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -117,17 +117,17 @@ def play(ctx, url, device, duration):
 def playlist(ctx, source, device):
     """Play a DP1 playlist from a URL or local file (use - for stdin)."""
     async def _go():
-        client = await _resolve_device(device)
-        if source == "-":
-            data = json.load(sys.stdin)
-            result = await client.display_playlist(playlist=data)
-        elif source.startswith("http://") or source.startswith("https://"):
-            result = await client.display_playlist(playlist_url=source)
-        else:
-            with open(source) as f:
-                data = json.load(f)
-            result = await client.display_playlist(playlist=data)
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            if source == "-":
+                data = json.load(sys.stdin)
+                result = await client.display_playlist(playlist=data)
+            elif source.startswith("http://") or source.startswith("https://"):
+                result = await client.display_playlist(playlist_url=source)
+            else:
+                with open(source) as f:
+                    data = json.load(f)
+                result = await client.display_playlist(playlist=data)
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -151,9 +151,9 @@ def build(ctx, urls, title, duration, scaling, background):
 def rotate(ctx, ccw, device):
     """Rotate the screen."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.rotate(clockwise=not ccw)
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.rotate(clockwise=not ccw)
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -164,9 +164,9 @@ def rotate(ctx, ccw, device):
 def volume(ctx, percent, device):
     """Set volume (0-100)."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.set_volume(percent)
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.set_volume(percent)
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -176,9 +176,9 @@ def volume(ctx, percent, device):
 def mute(ctx, device):
     """Toggle mute."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.toggle_mute()
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.toggle_mute()
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -189,9 +189,9 @@ def mute(ctx, device):
 def key(ctx, code, device):
     """Send a keyboard event."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.send_key(code)
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.send_key(code)
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -201,9 +201,9 @@ def key(ctx, code, device):
 def reboot(ctx, device):
     """Reboot the device."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.reboot()
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.reboot()
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -213,9 +213,9 @@ def reboot(ctx, device):
 def shutdown(ctx, device):
     """Shutdown the device."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.shutdown()
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.shutdown()
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -225,9 +225,9 @@ def shutdown(ctx, device):
 def update(ctx, device):
     """Trigger OTA firmware update."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.update_firmware()
-        _output(result, ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.update_firmware()
+            _output(result, ctx.obj["pretty"])
     _run(_go())
 
 
@@ -237,7 +237,7 @@ def update(ctx, device):
 def player(ctx, device):
     """Get current playback status via WebSocket."""
     async def _go():
-        client = await _resolve_device(device)
-        result = await client.get_player_status()
-        _output(result.model_dump(by_alias=True), ctx.obj["pretty"])
+        async with await _resolve_device(device) as client:
+            result = await client.get_player_status()
+            _output(result.model_dump(by_alias=True), ctx.obj["pretty"])
     _run(_go())
