@@ -144,6 +144,10 @@ pip install -e ".[mcp]"
 pytest
 ```
 
+## Support
+
+If you find this useful: `davidmichael.eth`
+
 ## License
 
 MIT
