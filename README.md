@@ -2,33 +2,23 @@
 
 # `ff1ctl`
 
-**CLI and agent toolkit for the [Feral File](https://feralfile.com) FF1 art computer.**
-Zero-config discovery. Full device control. Agent-ready.
+**Agent toolkit and CLI for the [Feral File](https://feralfile.com) FF1 art computer.**
+Talk to your FF1 through Claude, the command line, or Python.
 
 ---
 
-## 1. Install
+## Quickstart — Claude Code
 
 ```bash
-git clone https://github.com/dmichael/ff1.git && cd ff1
-pip install -e ".[mcp]"
+claude plugin marketplace add dmichael/ff1
+claude plugin install ff1@ff1
 ```
 
-## 2. Discover
+Then just ask:
 
-```bash
-ff1ctl discover
-```
+> "Display this on my FF1: https://arweave.net/AqQfOQHzAGOa2ko16SwIuqQI4XpjDULEOSY6_6ssLnY"
 
-The FF1 announces itself as `FF1-XXXXXXXX` via mDNS. No configuration needed — `ff1ctl` finds it automatically by scanning the ARP table.
-
-## 3. Display
-
-```bash
-ff1ctl play https://arweave.net/AqQfOQHzAGOa2ko16SwIuqQI4XpjDULEOSY6_6ssLnY
-```
-
-Any publicly accessible URL works — web pages, images, NFT artwork on Arweave or IPFS. The above displays *Nothing Silent* by David Michael (from [Foundation](https://foundation.app/@davidmichael)):
+Claude discovers the device and displays the artwork — no configuration needed:
 
 ```json
 {"message": {"ok": true}}
@@ -37,15 +27,57 @@ Any publicly accessible URL works — web pages, images, NFT artwork on Arweave 
 
 That's it. You're displaying art.
 
+More things you can say:
+
+> "Rotate the screen and set volume to 30%"
+> "Build a playlist from these URLs and display it"
+
+Or use the slash command: `/ff1 discover my devices`
+
+### MCP Server (without plugin)
+
+Add to your Claude Code or Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "ff1": {
+      "command": "uvx",
+      "args": ["ff1ctl[mcp]", "ff1-mcp"]
+    }
+  }
+}
+```
+
+> **Note:** `ff1ctl` is not yet on PyPI. Until then, [install from source](#development) and use `"command": "ff1-mcp"` instead.
+
+**MCP tools:** `ff1_discover`, `ff1_status`, `ff1_rotate`, `ff1_set_volume`, `ff1_toggle_mute`, `ff1_send_key`, `ff1_shutdown`, `ff1_reboot`, `ff1_update`, `ff1_play_url`, `ff1_play_playlist`, `ff1_player_status`, `ff1_build_playlist`
+
 ---
 
-## More Commands
+## CLI
+
+For humans and scripts. Every command outputs JSON.
+
+### Install
 
 ```bash
+git clone https://github.com/dmichael/ff1.git && cd ff1
+pip install -e ".[mcp]"
+```
+
+### Usage
+
+```bash
+# Discover & display
+ff1ctl discover                                  # Find FF1 devices on the network
+ff1ctl play <url>                                # Display a single artwork
+ff1ctl play <url> --duration 60                  # Display for 60 seconds
+
 # Playlists
-ff1ctl build <url1> <url2> --title "My Show"   # Build a playlist
-ff1ctl build <url1> <url2> | ff1ctl playlist -  # Build and play immediately
-ff1ctl playlist <file.json>                      # Play from file or URL
+ff1ctl build <url1> <url2> --title "My Show"     # Build a playlist
+ff1ctl build <url1> <url2> | ff1ctl playlist -   # Build and play immediately
+ff1ctl playlist <file.json>                       # Play from file or URL
 
 # Device control
 ff1ctl status                      # Device info (orientation, wifi, version, volume)
@@ -62,42 +94,7 @@ ff1ctl update                      # OTA firmware update
 
 `--device HOST` targets a specific device. `--pretty` goes before the subcommand: `ff1ctl --pretty status`.
 
-## AI Agent Integration
-
-### Claude Code Plugin (recommended)
-
-```bash
-claude plugin marketplace add dmichael/ff1
-claude plugin install ff1@ff1
-```
-
-Then just ask Claude:
-
-> "Play this artwork on my FF1: https://example.com/art.html"
-> "Rotate the screen and set volume to 30%"
-
-Or use the slash command: `/ff1 build a playlist from these URLs and display it`
-
-The plugin provides MCP tools (self-contained) and a CLI skill. The skill requires `ff1ctl` in your PATH; MCP tools work without it.
-
-### MCP Server (manual)
-
-Add to your Claude Code or Claude Desktop config. No separate install needed — `uvx` handles it:
-
-```json
-{
-  "mcpServers": {
-    "ff1": {
-      "command": "uvx",
-      "args": ["ff1ctl[mcp]", "ff1-mcp"]
-    }
-  }
-}
-```
-
-> **Note:** `ff1ctl` is not yet published to PyPI. Until then, install from source (step 1) and use `"command": "ff1-mcp"` instead.
-
-**MCP tools:** `ff1_discover`, `ff1_status`, `ff1_rotate`, `ff1_set_volume`, `ff1_toggle_mute`, `ff1_send_key`, `ff1_shutdown`, `ff1_reboot`, `ff1_update`, `ff1_play_url`, `ff1_play_playlist`, `ff1_player_status`, `ff1_build_playlist`
+---
 
 ## Python Library
 
@@ -134,16 +131,17 @@ await client.display_playlist(playlist_url="https://example.com/playlist.json")
 ## Architecture
 
 ```
-Humans / Scripts ──► ff1ctl CLI ──┐
-AI Agents (Skill) ──► ff1ctl CLI ──┤──► FF1Client ──► HTTP :1111 ──► feral-controld
-AI Agents (MCP)   ──► MCP Server ──┘
+AI Agents (Plugin) ──► ff1ctl CLI ──┐
+AI Agents (MCP)    ──► MCP Server ──┤──► FF1Client ──► HTTP :1111 ──► feral-controld
+Humans / Scripts   ──► ff1ctl CLI ──┘
 ```
 
 ## Development
 
 ```bash
-pytest                  # Run all tests
-pytest -k "test_foo"    # Run matching tests
+git clone https://github.com/dmichael/ff1.git && cd ff1
+pip install -e ".[mcp]"
+pytest
 ```
 
 ## License
