@@ -30,6 +30,21 @@ Or use the slash command:
 /ff1 build a playlist from these URLs and display it
 ```
 
+## Example: Display an NFT
+
+Any publicly accessible image URL works — including NFT artwork stored on Arweave or IPFS. For example, to display *Nothing Silent* by David Michael (from [Foundation](https://foundation.app/@davidmichael)):
+
+```bash
+ff1ctl play https://arweave.net/AqQfOQHzAGOa2ko16SwIuqQI4XpjDULEOSY6_6ssLnY
+```
+
+The FF1 auto-discovers on your network and displays the artwork immediately:
+
+```json
+{"message": {"ok": true}}
+{"using": "FF1-KZD1O1F7", "host": "192.168.1.79"}
+```
+
 ## Install
 
 ### As a Python package
@@ -153,21 +168,6 @@ ff1ctl update                      # OTA firmware update
 ```
 
 `--device HOST` is a per-command option to target a specific device. `--pretty` is a top-level flag that goes before the subcommand: `ff1ctl --pretty play <url>`.
-
-## Example: Display an NFT
-
-Any publicly accessible image URL works with `ff1ctl play` — including NFT artwork stored on Arweave or IPFS. For example, to display *Nothing Silent* by David Michael (from [Foundation](https://foundation.app/@davidmichael)):
-
-```bash
-ff1ctl play https://arweave.net/AqQfOQHzAGOa2ko16SwIuqQI4XpjDULEOSY6_6ssLnY
-```
-
-The FF1 auto-discovers on your network and displays the artwork immediately:
-
-```json
-{"message": {"ok": true}}
-{"using": "FF1-KZD1O1F7", "host": "192.168.1.79"}
-```
 
 ## Development
 
