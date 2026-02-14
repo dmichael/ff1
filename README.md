@@ -10,13 +10,8 @@ Zero-config discovery. Full device control. Agent-ready.
 ## 1. Install
 
 ```bash
-pip install ff1ctl
-```
-
-Or run without installing:
-
-```bash
-uvx ff1ctl discover
+git clone https://github.com/dmichael/ff1.git && cd ff1
+pip install -e ".[mcp]"
 ```
 
 ## 2. Discover
@@ -87,6 +82,8 @@ The plugin provides MCP tools (self-contained) and a CLI skill. The skill requir
 
 ### MCP Server (manual)
 
+Add to your Claude Code or Claude Desktop config. No separate install needed — `uvx` handles it:
+
 ```json
 {
   "mcpServers": {
@@ -97,6 +94,8 @@ The plugin provides MCP tools (self-contained) and a CLI skill. The skill requir
   }
 }
 ```
+
+> **Note:** `ff1ctl` is not yet published to PyPI. Until then, install from source (step 1) and use `"command": "ff1-mcp"` instead.
 
 **MCP tools:** `ff1_discover`, `ff1_status`, `ff1_rotate`, `ff1_set_volume`, `ff1_toggle_mute`, `ff1_send_key`, `ff1_shutdown`, `ff1_reboot`, `ff1_update`, `ff1_play_url`, `ff1_play_playlist`, `ff1_player_status`, `ff1_build_playlist`
 
@@ -143,10 +142,8 @@ AI Agents (MCP)   ──► MCP Server ──┘
 ## Development
 
 ```bash
-git clone https://github.com/dmichael/ff1.git && cd ff1
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[mcp]"
-pytest
+pytest                  # Run all tests
+pytest -k "test_foo"    # Run matching tests
 ```
 
 ## License
