@@ -1,51 +1,35 @@
-<p align="center">
-  <img src="https://substack-post-media.s3.amazonaws.com/public/images/3f096425-f669-4922-b929-2aeb005ef4f9_2400x2400.png" width="480" alt="FF1 — the art computer by Feral File" />
-</p>
-
 <h1 align="center">ff1ctl</h1>
 
 <p align="center">
-  <strong>CLI and agent toolkit for the <a href="https://feralfile.com">Feral File FF1</a> art computer.</strong><br/>
+  <strong>CLI and agent toolkit for the <a href="https://feralfile.com">Feral File</a> FF1 art computer.</strong><br/>
   Zero-config discovery. Full device control. Agent-ready.
-</p>
-
-<p align="center">
-  <code>pip install ff1ctl</code>&nbsp;&nbsp;or&nbsp;&nbsp;<code>uvx ff1ctl discover</code>
 </p>
 
 ---
 
-## What is this?
+## Quickstart — Claude Code Plugin
 
-**ff1ctl** gives you complete control over FF1 art computers from the command line, from Python, or from AI agents (via MCP or skill files). It talks directly to the device's local API — no cloud, no app required.
+The fastest way to get started. Install as a Claude Code plugin and get MCP tools, skills, and the `/ff1` slash command in one step:
 
 ```bash
-$ ff1ctl discover
-[{"host": "192.168.1.42", "port": 1111, "name": "FF1-ABC12345"}]
-
-$ ff1ctl status --pretty
-{
-  "screenRotation": "portrait",
-  "connectedWifi": "MyWifi",
-  "installedVersion": "1.0.7",
-  "volume": 50,
-  "isMuted": false
-}
-
-$ ff1ctl play https://example.com/my-generative-art.html
+claude plugin install github.com/dmichael/ff1
 ```
 
-## Features
+Then just ask Claude:
 
-- **Zero-config discovery** — finds FF1 devices on your network automatically (ARP + mDNS hostname matching)
-- **Full device control** — rotate, volume, mute, reboot, shutdown, firmware update
-- **DP1 playlist builder** — create valid playlists from artwork URLs, pipe them to the device
-- **JSON output** — every command returns structured JSON, perfect for scripting and agents
-- **MCP server** — expose all tools to Claude Code, Claude Desktop, or any MCP client
-- **Python async client** — `await client.rotate()` from your own code
-- **Multi-device aware** — explicit selection when multiple FF1s are on the network
+> "Discover my FF1 and show its status"
+> "Play this artwork on my FF1: https://example.com/art.html"
+> "Rotate the screen and set volume to 30%"
+
+Or use the slash command:
+
+```
+/ff1 build a playlist from these URLs and display it
+```
 
 ## Install
+
+### As a Python package
 
 ```bash
 pip install ff1ctl          # CLI + Python library
@@ -58,52 +42,33 @@ Or run without installing:
 uvx ff1ctl discover
 ```
 
-## CLI Reference
+### As an MCP server (manual)
 
-### Discovery & Status
+Add to your Claude Code or Claude Desktop config:
 
-```bash
-ff1ctl discover                    # Find FF1 devices on the network
-ff1ctl status                      # Device info (orientation, wifi, version, volume)
-ff1ctl player                      # Current playback status
+```json
+{
+  "mcpServers": {
+    "ff1": {
+      "command": "uvx",
+      "args": ["ff1ctl[mcp]", "ff1-mcp"]
+    }
+  }
+}
 ```
 
-### Display Artwork
+**Available MCP tools:** `ff1_discover`, `ff1_status`, `ff1_rotate`, `ff1_set_volume`, `ff1_toggle_mute`, `ff1_send_key`, `ff1_shutdown`, `ff1_reboot`, `ff1_update`, `ff1_play_url`, `ff1_play_playlist`, `ff1_player_status`, `ff1_build_playlist`
 
-```bash
-ff1ctl play <url>                  # Display a single artwork
-ff1ctl play <url> --duration 60    # Set display duration (seconds)
-ff1ctl playlist <url>              # Play a DP1 playlist from URL
-ff1ctl playlist <file.json>        # Play from local file
-ff1ctl playlist -                  # Play from stdin
-```
+## Features
 
-### Build Playlists
-
-```bash
-ff1ctl build <url1> <url2> --title "My Show" --duration 120
-ff1ctl build <url1> <url2> | ff1ctl playlist -    # Build and play
-```
-
-### Device Control
-
-```bash
-ff1ctl rotate                      # Rotate clockwise
-ff1ctl rotate --ccw                # Rotate counter-clockwise
-ff1ctl volume 50                   # Set volume (0-100)
-ff1ctl mute                        # Toggle mute
-ff1ctl key 13                      # Send keyboard event
-```
-
-### System
-
-```bash
-ff1ctl reboot                      # Reboot
-ff1ctl shutdown                    # Shutdown
-ff1ctl update                      # OTA firmware update
-```
-
-All commands accept `--device HOST` to target a specific device and `--pretty` for formatted output.
+- **Zero-config discovery** — finds FF1 devices on your network automatically (ARP + mDNS hostname matching)
+- **Full device control** — rotate, volume, mute, reboot, shutdown, firmware update
+- **DP1 playlist builder** — create valid playlists from artwork URLs, pipe them to the device
+- **JSON output** — every command returns structured JSON, perfect for scripting and agents
+- **MCP server** — expose all tools to Claude Code, Claude Desktop, or any MCP client
+- **Claude Code plugin** — one-command install bundles MCP tools, skills, and slash commands
+- **Python async client** — `await client.rotate()` from your own code
+- **Multi-device aware** — explicit selection when multiple FF1s are on the network
 
 ## Python Library
 
@@ -119,37 +84,6 @@ await client.rotate(clockwise=True)
 await client.set_volume(75)
 await client.display_playlist(playlist_url="https://example.com/playlist.json")
 ```
-
-## MCP Server
-
-Expose all FF1 tools to Claude Code, Claude Desktop, or any MCP-compatible agent.
-
-```bash
-ff1-mcp                            # Start the MCP server
-```
-
-Add to your Claude Code config:
-
-```json
-{
-  "mcpServers": {
-    "ff1": {
-      "command": "uvx",
-      "args": ["ff1ctl[mcp]", "ff1-mcp"]
-    }
-  }
-}
-```
-
-**Available tools:** `ff1_discover`, `ff1_status`, `ff1_rotate`, `ff1_set_volume`, `ff1_toggle_mute`, `ff1_send_key`, `ff1_shutdown`, `ff1_reboot`, `ff1_update`, `ff1_play_url`, `ff1_play_playlist`, `ff1_player_status`, `ff1_build_playlist`
-
-## Claude Code Skill
-
-Drop `skill.md` into your project and Claude Code can control your FF1 by shelling out to `ff1ctl`:
-
-> "Play this artwork on my FF1"
-> "Rotate the screen and set volume to 30%"
-> "Build a playlist from these three URLs and display it"
 
 ## Configuration
 
@@ -183,10 +117,44 @@ Three layers, one codebase:
 2. **CLI** (`ff1ctl`) — structured JSON output for humans and scripts
 3. **MCP server** (`ff1-mcp`) — tool interface for AI agents
 
+## CLI Reference
+
+```bash
+# Discovery & Status
+ff1ctl discover                    # Find FF1 devices on the network
+ff1ctl status                      # Device info (orientation, wifi, version, volume)
+ff1ctl player                      # Current playback status
+
+# Display Artwork
+ff1ctl play <url>                  # Display a single artwork
+ff1ctl play <url> --duration 60    # Set display duration (seconds)
+ff1ctl playlist <url>              # Play a DP1 playlist from URL
+ff1ctl playlist <file.json>        # Play from local file
+ff1ctl playlist -                  # Play from stdin
+
+# Build Playlists
+ff1ctl build <url1> <url2> --title "My Show" --duration 120
+ff1ctl build <url1> <url2> | ff1ctl playlist -    # Build and play
+
+# Device Control
+ff1ctl rotate                      # Rotate clockwise
+ff1ctl rotate --ccw                # Rotate counter-clockwise
+ff1ctl volume 50                   # Set volume (0-100)
+ff1ctl mute                        # Toggle mute
+ff1ctl key 13                      # Send keyboard event
+
+# System
+ff1ctl reboot                      # Reboot
+ff1ctl shutdown                    # Shutdown
+ff1ctl update                      # OTA firmware update
+```
+
+All commands accept `--device HOST` to target a specific device and `--pretty` for formatted output.
+
 ## Development
 
 ```bash
-git clone <repo> && cd ff1
+git clone https://github.com/dmichael/ff1.git && cd ff1
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[mcp]"
 pytest

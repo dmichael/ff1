@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ff1": {
+      "command": "uvx",
+      "args": ["ff1ctl[mcp]", "ff1-mcp"]
+    }
+  }
+}
