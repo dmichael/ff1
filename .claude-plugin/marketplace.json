@@ -1,0 +1,15 @@
+{
+  "name": "ff1",
+  "owner": {
+    "name": "David Michael",
+    "url": "https://github.com/dmichael"
+  },
+  "plugins": [
+    {
+      "name": "ff1",
+      "source": ".",
+      "description": "Control Feral File FF1 art computers — discover, display artwork, rotate, volume, playlists, and more.",
+      "version": "0.1.0"
+    }
+  ]
+}

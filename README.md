@@ -12,7 +12,8 @@ Zero-config discovery. Full device control. Agent-ready.
 The fastest way to get started. Install as a Claude Code plugin and get MCP tools, skills, and the `/ff1` slash command in one step:
 
 ```bash
-claude plugin install github.com/dmichael/ff1
+claude plugin marketplace add dmichael/ff1
+claude plugin install ff1@ff1
 ```
 
 Then just ask Claude:
