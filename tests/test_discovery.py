@@ -50,6 +50,40 @@ def test_load_devices_no_config():
     assert devices == []
 
 
+def test_load_devices_skips_invalid_port(tmp_path):
+    config = tmp_path / "ff1.json"
+    config.write_text(json.dumps({
+        "devices": [
+            {"name": "Bad", "host": "192.168.1.100:not-a-port"},
+            {"name": "Good", "host": "192.168.1.101:1111"},
+        ]
+    }))
+
+    with patch("ff1.discovery._find_config", return_value=config):
+        devices = load_devices()
+
+    assert len(devices) == 1
+    assert devices[0].name == "Good"
+    assert devices[0].host == "192.168.1.101"
+    assert devices[0].port == 1111
+
+
+def test_load_devices_supports_ipv6_brackets(tmp_path):
+    config = tmp_path / "ff1.json"
+    config.write_text(json.dumps({
+        "devices": [
+            {"name": "IPv6 Device", "host": "http://[2001:db8::1]:1212/api"},
+        ]
+    }))
+
+    with patch("ff1.discovery._find_config", return_value=config):
+        devices = load_devices()
+
+    assert len(devices) == 1
+    assert devices[0].host == "2001:db8::1"
+    assert devices[0].port == 1212
+
+
 def test_scan_arp_finds_ff1():
     arp_output = textwrap.dedent("""\
         ? (192.168.1.1) at aa:bb:cc:dd:ee:ff on en0 ifscope [ethernet]

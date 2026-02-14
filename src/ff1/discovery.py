@@ -19,6 +19,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 
@@ -66,18 +67,21 @@ def load_devices() -> list[DeviceInfo]:
 
     devices = []
     for d in devices_data:
-        host = d.get("host", "")
-        if not host:
+        raw_host = str(d.get("host", "")).strip()
+        if not raw_host:
             continue
-        host = host.removeprefix("http://").removeprefix("https://")
-        if "/" in host:
-            host = host.split("/")[0]
-        if ":" in host:
-            parts = host.rsplit(":", 1)
-            host = parts[0]
-            port = int(parts[1])
-        else:
-            port = FF1_DEFAULT_PORT
+        if "://" not in raw_host:
+            raw_host = f"http://{raw_host}"
+
+        try:
+            parsed = urlparse(raw_host)
+            host = parsed.hostname
+            if not host:
+                continue
+            port = parsed.port or FF1_DEFAULT_PORT
+        except ValueError:
+            # Invalid URL/port syntax in config entry; ignore this device.
+            continue
 
         devices.append(DeviceInfo(
             host=host,

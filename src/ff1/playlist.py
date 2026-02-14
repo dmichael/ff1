@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from ff1.types import DP1Playlist, DisplayConfig, PlaylistDefaults, PlaylistItem
+from ff1.url_policy import validate_playback_url
 
 
 def _slugify(text: str) -> str:
@@ -29,6 +30,7 @@ def build_playlist(
 
     items = []
     for source in sources:
+        validate_playback_url(source)
         item_title = urlparse(source).path.split("/")[-1] or "Untitled"
         items.append(PlaylistItem(
             id=str(uuid.uuid4()),

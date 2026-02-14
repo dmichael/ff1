@@ -136,6 +136,34 @@ async def test_display_playlist_by_object(client):
 
 
 @pytest.mark.asyncio
+async def test_display_playlist_validation_disabled_by_default():
+    client = FF1Client(host="10.0.0.1")
+    mock_response = _ok()
+
+    with patch.object(client._http, "post", new_callable=AsyncMock, return_value=mock_response):
+        # Non-http URL is allowed when feature flag is disabled.
+        await client.display_playlist(playlist_url="file:///tmp/playlist.json")
+
+
+@pytest.mark.asyncio
+async def test_display_playlist_validation_enforced_with_env(monkeypatch):
+    client = FF1Client(host="10.0.0.1")
+    monkeypatch.setenv("FF1_ENABLE_URL_VALIDATION", "1")
+
+    with pytest.raises(ValueError, match="http:// or https://"):
+        await client.display_playlist(playlist_url="file:///tmp/playlist.json")
+
+
+@pytest.mark.asyncio
+async def test_display_playlist_payload_validation_enforced_with_env(monkeypatch):
+    client = FF1Client(host="10.0.0.1")
+    monkeypatch.setenv("FF1_ENABLE_URL_VALIDATION", "1")
+
+    with pytest.raises(ValueError, match="Invalid DP1 playlist payload"):
+        await client.display_playlist(playlist={"items": "not-a-list"})
+
+
+@pytest.mark.asyncio
 async def test_display_playlist_requires_arg(client):
     with pytest.raises(ValueError, match="Provide either"):
         await client.display_playlist()

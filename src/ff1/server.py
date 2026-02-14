@@ -7,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from ff1.client import FF1Client
 from ff1.discovery import discover_devices
 from ff1.playlist import build_playlist
+from ff1.url_policy import validate_playback_url
 
 mcp = FastMCP("ff1", instructions="Control FF1 art computers on the local network.")
 
@@ -102,6 +103,7 @@ async def ff1_update(device: str | None = None) -> dict:
 @mcp.tool()
 async def ff1_play_url(url: str, duration: int = 300, device: str | None = None) -> dict:
     """Display a single artwork URL on the FF1."""
+    validate_playback_url(url)
     async with await _get_client(device) as client:
         pl = build_playlist([url], title="Quick Play", duration=duration)
         return await client.display_playlist(playlist=pl.model_dump(by_alias=True, exclude_none=True))
@@ -110,6 +112,7 @@ async def ff1_play_url(url: str, duration: int = 300, device: str | None = None)
 @mcp.tool()
 async def ff1_play_playlist(playlist_url: str, device: str | None = None) -> dict:
     """Play a DP1 playlist from a URL on the FF1."""
+    validate_playback_url(playlist_url)
     async with await _get_client(device) as client:
         return await client.display_playlist(playlist_url=playlist_url)
 

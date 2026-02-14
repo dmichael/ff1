@@ -9,6 +9,7 @@ import httpx
 import websockets
 
 from ff1.types import Command, CommandEnvelope, DeviceStatus, PlayerStatus
+from ff1.url_policy import validate_playback_url, validate_playlist_payload
 
 _DEFAULT_TIMEOUT = 30.0
 _DEFAULT_WS_TIMEOUT = 10.0
@@ -97,8 +98,10 @@ class FF1Client:
         if playlist and playlist_url:
             raise ValueError("Provide playlist or playlist_url, not both")
         if playlist_url:
+            validate_playback_url(playlist_url)
             return await self.send_command(Command.DISPLAY_PLAYLIST, {"playlistUrl": playlist_url})
         if playlist:
+            validate_playlist_payload(playlist)
             return await self.send_command(Command.DISPLAY_PLAYLIST, {
                 "dp1_call": playlist,
                 "intent": {"action": "now_display"},
