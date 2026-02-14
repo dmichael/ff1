@@ -16,6 +16,8 @@ claude plugin marketplace add dmichael/ff1
 claude plugin install ff1@ff1
 ```
 
+The plugin provides MCP tools (self-contained) and a skill that invokes the `ff1ctl` CLI. If you plan to use the skill/slash command, ensure `ff1ctl` is installed and in your PATH (e.g. `pip install ff1ctl`). MCP tools work without this.
+
 Then just ask Claude:
 
 > "Discover my FF1 and show its status"
@@ -150,7 +152,22 @@ ff1ctl shutdown                    # Shutdown
 ff1ctl update                      # OTA firmware update
 ```
 
-All commands accept `--device HOST` to target a specific device and `--pretty` for formatted output.
+`--device HOST` is a per-command option to target a specific device. `--pretty` is a top-level flag that goes before the subcommand: `ff1ctl --pretty play <url>`.
+
+## Example: Display an NFT
+
+Any publicly accessible image URL works with `ff1ctl play` — including NFT artwork stored on Arweave or IPFS. For example, to display *Nothing Silent* by David Michael (from [Foundation](https://foundation.app/@davidmichael)):
+
+```bash
+ff1ctl play https://arweave.net/AqQfOQHzAGOa2ko16SwIuqQI4XpjDULEOSY6_6ssLnY
+```
+
+The FF1 auto-discovers on your network and displays the artwork immediately:
+
+```json
+{"message": {"ok": true}}
+{"using": "FF1-KZD1O1F7", "host": "192.168.1.79"}
+```
 
 ## Development
 

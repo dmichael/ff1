@@ -3,7 +3,7 @@ name: ff1-control
 description: Control FF1 art computers — discover devices, display artwork, rotate, volume, playlists. Use when the user mentions FF1, art computer, or Feral File device control.
 ---
 
-You can control FF1 art computers using the `ff1ctl` CLI. All commands output JSON. Use `--pretty` for human-readable output.
+You can control FF1 art computers using the `ff1ctl` CLI. All commands output JSON. `--pretty` is a **top-level** flag that goes before the subcommand: `ff1ctl --pretty play <url>`.
 
 ## Discovery
 
