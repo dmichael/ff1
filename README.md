@@ -2,7 +2,7 @@
 
 # `ff1ctl`
 
-**Agent toolkit and CLI for the [Feral File](https://feralfile.com) FF1 art computer.**
+**Agent toolkit and CLI for the [Feral File](https://feralfile.com) [FF1](https://feralfile.com/install) art computer.**
 Talk to your FF1 through Claude, the command line, or Python.
 
 ---
