@@ -34,22 +34,28 @@ More things you can say:
 
 Or use the slash command: `/ff1 discover my devices`
 
-### MCP Server (without plugin)
+### MCP Server
 
-Add to your Claude Code or Claude Desktop config:
+One command, available in every project:
+
+```bash
+claude mcp add ff1 -- uvx --from "ff1ctl[mcp] @ git+https://github.com/dmichael/ff1" ff1-mcp
+```
+
+Or add to `.mcp.json` in any project:
 
 ```json
 {
   "mcpServers": {
     "ff1": {
       "command": "uvx",
-      "args": ["ff1ctl[mcp]", "ff1-mcp"]
+      "args": ["--from", "ff1ctl[mcp] @ git+https://github.com/dmichael/ff1", "ff1-mcp"]
     }
   }
 }
 ```
 
-> **Note:** `ff1ctl` is not yet on PyPI. Until then, [install from source](#development) and use `"command": "ff1-mcp"` instead.
+Requires [uv](https://docs.astral.sh/uv/) (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
 
 **MCP tools:** `ff1_discover`, `ff1_status`, `ff1_rotate`, `ff1_set_volume`, `ff1_toggle_mute`, `ff1_send_key`, `ff1_shutdown`, `ff1_reboot`, `ff1_update`, `ff1_play_url`, `ff1_play_playlist`, `ff1_player_status`, `ff1_build_playlist`
 
@@ -60,6 +66,12 @@ Add to your Claude Code or Claude Desktop config:
 For humans and scripts. Every command outputs JSON.
 
 ### Install
+
+```bash
+uvx --from "ff1ctl @ git+https://github.com/dmichael/ff1" ff1ctl --help
+```
+
+Or from source:
 
 ```bash
 git clone https://github.com/dmichael/ff1.git && cd ff1

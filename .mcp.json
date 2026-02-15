@@ -2,7 +2,7 @@
   "mcpServers": {
     "ff1": {
       "command": "uvx",
-      "args": ["ff1ctl[mcp]", "ff1-mcp"]
+      "args": ["--from", "ff1ctl[mcp] @ git+https://github.com/dmichael/ff1", "ff1-mcp"]
     }
   }
 }
