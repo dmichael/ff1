@@ -9,40 +9,27 @@ Talk to your FF1 through Claude, the command line, or Python.
 
 ## Quickstart — Claude Code
 
+Install the MCP server (one command, available in every project):
+
 ```bash
-claude plugin marketplace add dmichael/ff1
-claude plugin install ff1@ff1
+claude mcp add ff1 -- uvx --from "ff1ctl[mcp] @ git+https://github.com/dmichael/ff1" ff1-mcp
 ```
 
 Then just ask:
 
 > "Display this on my FF1: https://arweave.net/AqQfOQHzAGOa2ko16SwIuqQI4XpjDULEOSY6_6ssLnY"
 
-Claude discovers the device and displays the artwork — no configuration needed:
-
-```json
-{"message": {"ok": true}}
-{"using": "FF1-KZD1O1F7", "host": "192.168.1.79"}
-```
-
-That's it. You're displaying art.
+Claude discovers the device and displays the artwork — no configuration needed.
 
 More things you can say:
 
 > "Rotate the screen and set volume to 30%"
 > "Build a playlist from these URLs and display it"
+> "What's currently playing?"
 
-Or use the slash command: `/ff1 discover my devices`
+### Project-scoped install
 
-### MCP Server
-
-One command, available in every project:
-
-```bash
-claude mcp add ff1 -- uvx --from "ff1ctl[mcp] @ git+https://github.com/dmichael/ff1" ff1-mcp
-```
-
-Or add to `.mcp.json` in any project:
+Add to `.mcp.json` in any project:
 
 ```json
 {
@@ -143,9 +130,9 @@ await client.display_playlist(playlist_url="https://example.com/playlist.json")
 ## Architecture
 
 ```
-AI Agents (Plugin) ──► ff1ctl CLI ──┐
-AI Agents (MCP)    ──► MCP Server ──┤──► FF1Client ──► HTTP :1111 ──► feral-controld
-Humans / Scripts   ──► ff1ctl CLI ──┘
+AI Agents ──► MCP Server ──┐
+                            ├──► FF1Client ──► HTTP :1111 ──► feral-controld
+Humans / Scripts ──► CLI ──┘
 ```
 
 ## Development

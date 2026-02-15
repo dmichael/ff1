@@ -9,7 +9,15 @@ from ff1.discovery import discover_devices
 from ff1.playlist import build_playlist
 from ff1.url_policy import validate_playback_url
 
-mcp = FastMCP("ff1", instructions="Control FF1 art computers on the local network.")
+mcp = FastMCP(
+    "ff1",
+    instructions=(
+        "Control Feral File FF1 art computers on the local network. "
+        "Devices are auto-discovered — most tools work without any arguments. "
+        "Pass `device` (name or IP) only when multiple FF1s are on the network. "
+        "Artwork URLs are typically IPFS/Arweave links or any web-accessible media."
+    ),
+)
 
 
 async def _get_client(device: str | None = None) -> FF1Client:
@@ -34,7 +42,10 @@ async def _get_client(device: str | None = None) -> FF1Client:
 
 @mcp.tool()
 async def ff1_discover() -> list[dict]:
-    """Find FF1 devices on the network (config + ARP scan)."""
+    """Find FF1 devices on the local network via config file and ARP scan.
+
+    Returns a list of devices with name, host, and port.
+    """
     devices = await discover_devices()
     return [d.model_dump() for d in devices]
 
@@ -43,7 +54,7 @@ async def ff1_discover() -> list[dict]:
 
 @mcp.tool()
 async def ff1_status(device: str | None = None) -> dict:
-    """Get FF1 device status (orientation, wifi, version, volume, etc.)."""
+    """Get device status: orientation, wifi, firmware version, volume, etc."""
     async with await _get_client(device) as client:
         result = await client.get_device_status()
         return result.model_dump(by_alias=True)
@@ -51,49 +62,49 @@ async def ff1_status(device: str | None = None) -> dict:
 
 @mcp.tool()
 async def ff1_rotate(clockwise: bool = True, device: str | None = None) -> dict:
-    """Rotate the FF1 screen. Set clockwise=False for counter-clockwise."""
+    """Rotate the screen 90 degrees. Default clockwise; set clockwise=False for counter-clockwise."""
     async with await _get_client(device) as client:
         return await client.rotate(clockwise=clockwise)
 
 
 @mcp.tool()
 async def ff1_set_volume(percent: int, device: str | None = None) -> dict:
-    """Set FF1 volume (0-100)."""
+    """Set volume level (0-100)."""
     async with await _get_client(device) as client:
         return await client.set_volume(percent)
 
 
 @mcp.tool()
 async def ff1_toggle_mute(device: str | None = None) -> dict:
-    """Toggle mute on the FF1."""
+    """Toggle mute on/off."""
     async with await _get_client(device) as client:
         return await client.toggle_mute()
 
 
 @mcp.tool()
 async def ff1_send_key(code: int, device: str | None = None) -> dict:
-    """Send a keyboard event to the FF1. Code is the key code (e.g., 13=Enter)."""
+    """Send a keyboard event. Common codes: 13=Enter, 27=Escape."""
     async with await _get_client(device) as client:
         return await client.send_key(code)
 
 
 @mcp.tool()
 async def ff1_shutdown(device: str | None = None) -> dict:
-    """Shutdown the FF1 device."""
+    """Shutdown the device."""
     async with await _get_client(device) as client:
         return await client.shutdown()
 
 
 @mcp.tool()
 async def ff1_reboot(device: str | None = None) -> dict:
-    """Reboot the FF1 device."""
+    """Reboot the device."""
     async with await _get_client(device) as client:
         return await client.reboot()
 
 
 @mcp.tool()
 async def ff1_update(device: str | None = None) -> dict:
-    """Trigger OTA firmware update on the FF1."""
+    """Trigger OTA firmware update."""
     async with await _get_client(device) as client:
         return await client.update_firmware()
 
@@ -102,7 +113,7 @@ async def ff1_update(device: str | None = None) -> dict:
 
 @mcp.tool()
 async def ff1_play_url(url: str, duration: int = 300, device: str | None = None) -> dict:
-    """Display a single artwork URL on the FF1."""
+    """Display a single artwork URL. Wraps it in a playlist with the given duration (seconds)."""
     validate_playback_url(url)
     async with await _get_client(device) as client:
         pl = build_playlist([url], title="Quick Play", duration=duration)
@@ -111,7 +122,7 @@ async def ff1_play_url(url: str, duration: int = 300, device: str | None = None)
 
 @mcp.tool()
 async def ff1_play_playlist(playlist_url: str, device: str | None = None) -> dict:
-    """Play a DP1 playlist from a URL on the FF1."""
+    """Play a DP1 playlist from a URL."""
     validate_playback_url(playlist_url)
     async with await _get_client(device) as client:
         return await client.display_playlist(playlist_url=playlist_url)
@@ -119,7 +130,7 @@ async def ff1_play_playlist(playlist_url: str, device: str | None = None) -> dic
 
 @mcp.tool()
 async def ff1_player_status(device: str | None = None) -> dict:
-    """Get current playback status from the FF1 (via WebSocket)."""
+    """Get current playback status (what's playing, position, etc.) via WebSocket."""
     async with await _get_client(device) as client:
         result = await client.get_player_status()
         return result.model_dump(by_alias=True)
@@ -135,7 +146,11 @@ def ff1_build_playlist(
     scaling: str = "fit",
     background: str = "#000000",
 ) -> dict:
-    """Build a DP1 playlist JSON from artwork URLs (does not send to device)."""
+    """Build a DP1 playlist JSON from artwork URLs.
+
+    Returns the playlist dict — does not send to device.
+    Use ff1_play_url for single artworks or ff1_play_playlist to play a hosted playlist.
+    """
     pl = build_playlist(urls, title=title, duration=duration, scaling=scaling, background=background)
     return pl.model_dump(by_alias=True, exclude_none=True)
 
