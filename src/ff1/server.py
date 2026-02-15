@@ -112,11 +112,11 @@ async def ff1_update(device: str | None = None) -> dict:
 # --- Playback ---
 
 @mcp.tool()
-async def ff1_play_url(url: str, duration: int = 300, device: str | None = None) -> dict:
+async def ff1_play_url(url: str, duration: int = 300, scaling: str = "fit", background: str = "#000000", device: str | None = None) -> dict:
     """Display a single artwork URL. Wraps it in a playlist with the given duration (seconds)."""
     validate_playback_url(url)
     async with await _get_client(device) as client:
-        pl = build_playlist([url], title="Quick Play", duration=duration)
+        pl = build_playlist([url], title="Quick Play", duration=duration, scaling=scaling, background=background)
         return await client.display_playlist(playlist=pl.model_dump(by_alias=True, exclude_none=True))
 
 
