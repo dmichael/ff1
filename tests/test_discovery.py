@@ -3,10 +3,58 @@
 import json
 import textwrap
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from ff1.discovery import FF1_DEFAULT_PORT, load_devices, scan_arp
 
+
+# --- FF1_DEVICE env var ---
+
+def test_load_devices_from_env_var():
+    with patch.dict("os.environ", {"FF1_DEVICE": "192.168.1.79"}, clear=False):
+        with patch("ff1.discovery._find_config", return_value=None):
+            devices = load_devices()
+
+    assert len(devices) == 1
+    assert devices[0].host == "192.168.1.79"
+    assert devices[0].port == FF1_DEFAULT_PORT
+
+
+def test_load_devices_env_var_with_port():
+    with patch.dict("os.environ", {"FF1_DEVICE": "192.168.1.79:2222"}, clear=False):
+        with patch("ff1.discovery._find_config", return_value=None):
+            devices = load_devices()
+
+    assert len(devices) == 1
+    assert devices[0].host == "192.168.1.79"
+    assert devices[0].port == 2222
+
+
+def test_load_devices_env_var_with_api_key():
+    env = {"FF1_DEVICE": "10.0.0.5", "FF1_API_KEY": "secret", "FF1_TOPIC_ID": "t1"}
+    with patch.dict("os.environ", env, clear=False):
+        with patch("ff1.discovery._find_config", return_value=None):
+            devices = load_devices()
+
+    assert devices[0].api_key == "secret"
+    assert devices[0].topic_id == "t1"
+
+
+def test_load_devices_env_var_takes_precedence(tmp_path):
+    config = tmp_path / "ff1.json"
+    config.write_text(json.dumps({
+        "devices": [{"name": "Config", "host": "192.168.1.100"}]
+    }))
+
+    with patch.dict("os.environ", {"FF1_DEVICE": "10.0.0.1"}, clear=False):
+        with patch("ff1.discovery._find_config", return_value=config):
+            devices = load_devices()
+
+    assert len(devices) == 1
+    assert devices[0].host == "10.0.0.1"
+
+
+# --- Config file ---
 
 def test_load_devices_from_config(tmp_path):
     config = tmp_path / "ff1.json"
@@ -17,8 +65,9 @@ def test_load_devices_from_config(tmp_path):
         ]
     }))
 
-    with patch("ff1.discovery._find_config", return_value=config):
-        devices = load_devices()
+    with patch("ff1.discovery._load_env_device", return_value=None):
+        with patch("ff1.discovery._find_config", return_value=config):
+            devices = load_devices()
 
     assert len(devices) == 2
     assert devices[0].name == "Living Room"
@@ -37,16 +86,18 @@ def test_load_devices_strips_protocol(tmp_path):
         ]
     }))
 
-    with patch("ff1.discovery._find_config", return_value=config):
-        devices = load_devices()
+    with patch("ff1.discovery._load_env_device", return_value=None):
+        with patch("ff1.discovery._find_config", return_value=config):
+            devices = load_devices()
 
     assert devices[0].host == "192.168.1.100"
     assert devices[0].port == 1111
 
 
 def test_load_devices_no_config():
-    with patch("ff1.discovery._find_config", return_value=None):
-        devices = load_devices()
+    with patch("ff1.discovery._load_env_device", return_value=None):
+        with patch("ff1.discovery._find_config", return_value=None):
+            devices = load_devices()
     assert devices == []
 
 
@@ -59,8 +110,9 @@ def test_load_devices_skips_invalid_port(tmp_path):
         ]
     }))
 
-    with patch("ff1.discovery._find_config", return_value=config):
-        devices = load_devices()
+    with patch("ff1.discovery._load_env_device", return_value=None):
+        with patch("ff1.discovery._find_config", return_value=config):
+            devices = load_devices()
 
     assert len(devices) == 1
     assert devices[0].name == "Good"
@@ -76,13 +128,16 @@ def test_load_devices_supports_ipv6_brackets(tmp_path):
         ]
     }))
 
-    with patch("ff1.discovery._find_config", return_value=config):
-        devices = load_devices()
+    with patch("ff1.discovery._load_env_device", return_value=None):
+        with patch("ff1.discovery._find_config", return_value=config):
+            devices = load_devices()
 
     assert len(devices) == 1
     assert devices[0].host == "2001:db8::1"
     assert devices[0].port == 1212
 
+
+# --- ARP scan ---
 
 def test_scan_arp_finds_ff1():
     arp_output = textwrap.dedent("""\
@@ -92,9 +147,10 @@ def test_scan_arp_finds_ff1():
         somehost (192.168.1.50) at 11:22:33:44:55:66 on en0 ifscope [ethernet]
     """)
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.stdout = arp_output
-        devices = scan_arp()
+    with patch("ff1.discovery._ping_broadcast"):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.stdout = arp_output
+            devices = scan_arp()
 
     assert len(devices) == 1
     assert devices[0].host == "192.168.1.42"
@@ -108,9 +164,10 @@ def test_scan_arp_multiple_devices():
         ff1-def67890.local (10.0.0.11) at 11:22:33:44:55:66 on en0 ifscope [ethernet]
     """)
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.stdout = arp_output
-        devices = scan_arp()
+    with patch("ff1.discovery._ping_broadcast"):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.stdout = arp_output
+            devices = scan_arp()
 
     assert len(devices) == 2
     assert {d.host for d in devices} == {"10.0.0.10", "10.0.0.11"}
@@ -119,8 +176,9 @@ def test_scan_arp_multiple_devices():
 def test_scan_arp_no_ff1():
     arp_output = "somehost (192.168.1.50) at 11:22:33:44:55:66 on en0\n"
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.stdout = arp_output
-        devices = scan_arp()
+    with patch("ff1.discovery._ping_broadcast"):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.stdout = arp_output
+            devices = scan_arp()
 
     assert devices == []

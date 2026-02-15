@@ -1,4 +1,4 @@
-"""FF1 device discovery — ARP/hostname scanning + config file.
+"""FF1 device discovery — mDNS/ARP scanning + env/config file.
 
 FF1 devices set their Linux hostname to FF1-XXXXXXXX during install
 (derived from MAC address). systemd-resolved advertises this via mDNS,
@@ -6,9 +6,10 @@ making them reachable as ff1-xxxxxxxx.local on the LAN.
 
 The device does NOT register mDNS service records, so service browsing
 won't find it. Instead, discovery works by:
-1. Config file — explicit device list
-2. ARP table scan — parse `arp -a` for hostnames matching ff1-*
-3. Probe — verify a candidate host has feral-controld on port 1111
+1. FF1_DEVICE env var — optional explicit host override
+2. Config file — explicit device list (ff1.json or ~/.config/ff1/config.json)
+3. Network scan — broadcast ping to populate ARP table, then match ff1-* hostnames
+4. Probe — verify candidates have feral-controld on port 1111
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -30,6 +32,35 @@ FF1_HOSTNAME_PREFIX = "ff1-"
 
 # ARP table entry: hostname (ip) at mac ...
 _ARP_RE = re.compile(r"^(\S+)\s+\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+(\S+)", re.MULTILINE)
+
+
+def _load_env_device() -> DeviceInfo | None:
+    """Load a single device from FF1_DEVICE env var.
+
+    Accepts: host, host:port, or a URL. Optional FF1_API_KEY and FF1_TOPIC_ID.
+    """
+    raw = os.environ.get("FF1_DEVICE", "").strip()
+    if not raw:
+        return None
+
+    if "://" not in raw:
+        raw = f"http://{raw}"
+    try:
+        parsed = urlparse(raw)
+        host = parsed.hostname
+        if not host:
+            return None
+        port = parsed.port or FF1_DEFAULT_PORT
+    except ValueError:
+        return None
+
+    return DeviceInfo(
+        host=host,
+        port=port,
+        name=host,
+        api_key=os.environ.get("FF1_API_KEY"),
+        topic_id=os.environ.get("FF1_TOPIC_ID"),
+    )
 
 
 def _find_config() -> Path | None:
@@ -49,7 +80,7 @@ def _find_config() -> Path | None:
 
 
 def load_devices() -> list[DeviceInfo]:
-    """Load configured devices from config file.
+    """Load configured devices from FF1_DEVICE env var or config file.
 
     Config format (compatible with ff1-cli):
     {
@@ -58,6 +89,10 @@ def load_devices() -> list[DeviceInfo]:
       ]
     }
     """
+    env_device = _load_env_device()
+    if env_device:
+        return [env_device]
+
     config_path = _find_config()
     if not config_path:
         return []
@@ -80,7 +115,6 @@ def load_devices() -> list[DeviceInfo]:
                 continue
             port = parsed.port or FF1_DEFAULT_PORT
         except ValueError:
-            # Invalid URL/port syntax in config entry; ignore this device.
             continue
 
         devices.append(DeviceInfo(
@@ -94,12 +128,67 @@ def load_devices() -> list[DeviceInfo]:
     return devices
 
 
-def scan_arp() -> list[DeviceInfo]:
-    """Parse the system ARP table for hostnames matching ff1-*.
+def _get_broadcast_address() -> str | None:
+    """Get the broadcast address for the primary network interface."""
+    try:
+        if sys.platform == "darwin":
+            result = subprocess.run(
+                ["ifconfig"],
+                capture_output=True, text=True, timeout=5,
+            )
+            # Find broadcast on active interface (has inet + broadcast)
+            for match in re.finditer(
+                r"inet (\d+\.\d+\.\d+\.\d+).*?broadcast (\d+\.\d+\.\d+\.\d+)",
+                result.stdout,
+            ):
+                addr, broadcast = match.groups()
+                if not addr.startswith("127."):
+                    return broadcast
+        else:
+            # Linux: ip addr show
+            result = subprocess.run(
+                ["ip", "-4", "addr", "show"],
+                capture_output=True, text=True, timeout=5,
+            )
+            for match in re.finditer(
+                r"inet (\d+\.\d+\.\d+\.\d+)/\d+\s+brd\s+(\d+\.\d+\.\d+\.\d+)",
+                result.stdout,
+            ):
+                addr, broadcast = match.groups()
+                if not addr.startswith("127."):
+                    return broadcast
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
 
-    Works on macOS and Linux. The ARP table is populated by normal
-    network activity — no special scanning needed.
+
+def _ping_broadcast():
+    """Send a broadcast ping to populate the ARP table with LAN neighbors.
+
+    The ARP table is often stale or empty. A broadcast ping forces the OS
+    to ARP-resolve all responding hosts, making mDNS hostnames (like
+    ff1-xxxxxxxx.localdomain) visible in the ARP table.
     """
+    broadcast = _get_broadcast_address()
+    if not broadcast:
+        return
+    try:
+        subprocess.run(
+            ["ping", "-c", "1", "-t", "1", broadcast],
+            capture_output=True, timeout=3,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+
+def scan_arp() -> list[DeviceInfo]:
+    """Broadcast ping to populate ARP, then match ff1-* hostnames.
+
+    Works on macOS and Linux. The broadcast ping ensures the ARP table
+    is fresh — without it, devices may not appear.
+    """
+    _ping_broadcast()
+
     try:
         result = subprocess.run(
             ["arp", "-a"],
@@ -111,7 +200,6 @@ def scan_arp() -> list[DeviceInfo]:
     devices = []
     seen = set()
     for hostname, ip, mac in _ARP_RE.findall(result.stdout):
-        # Match ff1-* hostnames (may have .localdomain or .local suffix)
         name_part = hostname.split(".")[0]
         if not name_part.lower().startswith(FF1_HOSTNAME_PREFIX):
             continue
@@ -121,7 +209,7 @@ def scan_arp() -> list[DeviceInfo]:
         devices.append(DeviceInfo(
             host=ip,
             port=FF1_DEFAULT_PORT,
-            name=name_part.upper(),  # Normalize to FF1-XXXXXXXX
+            name=name_part.upper(),
         ))
 
     return devices
@@ -144,24 +232,17 @@ async def probe_host(host: str, port: int = FF1_DEFAULT_PORT, timeout: float = 2
 
 
 async def scan_network(probe_timeout: float = 3.0) -> list[DeviceInfo]:
-    """Find FF1 devices on the network via ARP table, then verify with probe.
-
-    The ARP table contains hostnames from DHCP/mDNS. FF1 devices always
-    have hostnames matching FF1-XXXXXXXX. Each candidate is verified by
-    hitting its feral-controld API on port 1111.
-    """
+    """Find FF1 devices via broadcast ping + ARP scan, then verify with probe."""
     candidates = scan_arp()
     if not candidates:
         return []
 
-    # Verify all candidates concurrently
     tasks = [probe_host(d.host, d.port, timeout=probe_timeout) for d in candidates]
     results = await asyncio.gather(*tasks)
 
     verified = []
     for candidate, result in zip(candidates, results):
         if result is not None:
-            # Keep the nice hostname from ARP, not just the IP
             result.name = candidate.name
             verified.append(result)
 
@@ -169,7 +250,7 @@ async def scan_network(probe_timeout: float = 3.0) -> list[DeviceInfo]:
 
 
 async def discover_devices(timeout: float = 3.0) -> list[DeviceInfo]:
-    """Find FF1 devices: config first, then network scan as fallback."""
+    """Find FF1 devices: env/config first, then network scan as fallback."""
     devices = load_devices()
     if devices:
         return devices
