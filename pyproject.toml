@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ff1ctl"
-version = "0.1.0"
+version = "0.1.1"
 description = "CLI and agent toolkit for controlling FF1 art computers"
 requires-python = ">=3.11"
 license = "MIT"
